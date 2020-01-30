@@ -116,12 +116,12 @@ sub yaml_file() {
 sub js_file() {
     my ($filename, $contents) = @_;
 
-    my $cmd = "eslint --stdin --stdin-filename '$filename'"
+    my $cmd = "eslint --stdin --stdin-filename '$filename'";
     my ($stdout, $stderr, $retcode) = run $cmd, $contents;
     if ($retcode == 1) {
         die "ES linting error";
     } elsif ($retcode == 2) {
-        say @stderr;
+        say @{$stderr};
         die "ESLint encountered an error";
     }
 }
@@ -129,7 +129,7 @@ sub js_file() {
 sub css_file() {
     my ($filename, $contents) = @_;
 
-    my $cmd = "stylelint --stdin-filename '$filename' --formatter compact"
+    my $cmd = "stylelint --stdin-filename '$filename' --formatter compact";
     my ($stdout, $stderr, $retcode) = run $cmd, $contents;
     if ($retcode == 1 || $retcode == 78) {
         die "stylelint encountered an error";

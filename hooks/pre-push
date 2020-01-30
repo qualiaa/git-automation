@@ -5,7 +5,7 @@ set -euo pipefail
 readonly repo=$(pwd)
 
 to_delete=()
-trap '! rm -r ${to_delete[@]} &2>/dev/null' EXIT
+trap '! rm -r ${to_delete[@]} 2>/dev/null' EXIT
 
 
 die() {
