@@ -1,0 +1,95 @@
+# git ls-files --others --exclude-from=.git/info/exclude
+
+# Compressed files
+*.tar.*
+*.rar
+*.zip
+*.7z
+
+# Build dirs
+build/
+dist/
+
+# Python stuff
+__pycache__
+*.py[cod]
+
+.env
+.venv
+
+# VIM files
+*.sw?
+*~
+
+# From github.com/github/gitignore/Global/vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# From github.com/github/gitignore/Global/emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+# Org-mode
+.org-id-locations
+*_archive
+# flymake-mode
+*_flymake.*
+flycheck_*.el
+.projectile
+# directory configuration
+.dir-locals.el
+
+# From github.com/github/gitignore/C++
+# and  github.com/github/gitignore/C
+*.d
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+# Precompiled Headers
+*.gch
+*.pch
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+# Fortran module files
+*.mod
+*.smod
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+DKMS.CONF
