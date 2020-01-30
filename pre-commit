@@ -53,7 +53,7 @@ sub run {
 sub py_file {
     my ($filename, $contents) = @_;
 
-    my $cmd = "pylint --disable=C --from-stdin '$filename'";
+    my $cmd = "pylint3 --disable=C -";
     my ($stdout, $stderr, $retcode) = run $cmd, $contents;
     if ($retcode == 32) {
         say @{$stderr};
@@ -107,23 +107,50 @@ sub yaml_file() {
     my ($filename, $contents) = @_;
 
     my $cmd = "yamllint --strict -";
-    print "\tyamllint ";
     my ($stdout, $stderr, $retcode) = run $cmd, $contents;
     if ($retcode == 1) {
         die "YAML linting error";
     }
 }
 
+sub js_file() {
+    my ($filename, $contents) = @_;
+
+    my $cmd = "eslint --stdin --stdin-filename '$filename'"
+    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
+    if ($retcode == 1) {
+        die "ES linting error";
+    } elsif ($retcode == 2) {
+        say @stderr;
+        die "ESLint encountered an error";
+    }
+}
+
+sub css_file() {
+    my ($filename, $contents) = @_;
+
+    my $cmd = "stylelint --stdin-filename '$filename' --formatter compact"
+    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
+    if ($retcode == 1 || $retcode == 78) {
+        die "stylelint encountered an error";
+    } elsif ($retcode == 2) {
+        die "CSS linting error";
+    }
+}
+
 my %hooks = (
     #"cpp" => {"post" => \&cpp_post},
     "py"   => {"file" => \&py_file},
-    "html" => {"file" => \&html_file},
     "xml"  => {"file" => \&xml_file},
     "json" => {"file" => \&json_file},
     "yaml" => {"file" => \&yml_file},
     "yml"  => {"file" => \&yml_file},
     "sh"   => {"file" => \&shell_file},
     "bash" => {"file" => \&shell_file},
+    "sass" => {"file" => \&css_file},
+    "css"  => {"file" => \&css_file},
+    "js"   => {"file" => \&js_file},
+    "html" => {"file" => \&html_file},
 );
 
 my %files_by_type;
