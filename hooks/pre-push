@@ -14,18 +14,26 @@ die() {
 }
 
 test_ros() {
-    echo "ROS tests not implemented"
+    if [ -f "$repo/../../.catkin_workspace" ]; then
+        (
+            cd "$repo/../.."
+            source devel/setup.bash
+            rm -rf build/*
+            catkin_make && catkin_make run_tests
+        )
+    else
+        echo "Cannot find catkin workspace for tests"
+    fi
 }
 
 test_cmake() {
     echo "Running CMake"
     mkdir build
-    cd build
-    cmake ..
-    make -j || make test
-    retval=$?
-    cd ..
-    return $retval
+    (
+        cd build
+        cmake ..
+        make -j && make test
+    )
 }
 
 test_python() {
