@@ -48,10 +48,17 @@ run_tests() {
             set -e
         fi
     else
-        set +e
-        test_python
-        (( result |= $? ))
-        set -e
+        if [ -f tox.ini ]; then
+            set +e
+            tox
+            (( result |= $? ))
+            set -e
+        elif find . | grep -q "\.py$"; then
+            set +e
+            test_python
+            (( result |= $? ))
+            set -e
+        fi
     fi
     return $result
 }
