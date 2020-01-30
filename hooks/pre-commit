@@ -4,6 +4,7 @@ use v5.20;
 use strict;
 use warnings;
 
+use File::Basename;
 use IPC::Open3;
 
 my $rev = "HEAD";
@@ -12,11 +13,30 @@ if (system("git rev-parse --verify HEAD >/dev/null 2>&1")) {
     $rev = `git hash-object -t tree /dev/null`;
 }
 
-sub parse_shebang {
-    # TODO
-    my $obj = shift;
-    my $first_line = `git cat-file -p $obj | head -n1 | head -c256`;
+my %prog_to_ext = (
+    #"cpp" => {"post" => \&cpp_post},
+    "python"     => "py",
+    "python3"    => "py",
+    "perl"       => "pl",
+    "sh"         => "sh",
+    "node"       => "js",
+    "bash"       => "bash",
+    "runhaskell" => "hs",
+);
 
+sub parse_shebang {
+    my $obj_sha = shift;
+    my $first_line = `git cat-file -p $obj_sha | head -n1 | head -c256`;
+
+    my ($path, $arg1) = $first_line =~ /^#!\s*(\S+)\s+(\S+)?/;
+
+    if (defined $path) {
+        my $prog = basename $path;
+        if ($prog eq "env") {
+            $prog = $arg1;
+        }
+        return $prog_to_ext{$prog};
+    }
     return 0;
 }
 
