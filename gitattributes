@@ -1,0 +1,3 @@
+*.txt filter=mytest
+*.py filter=python
+

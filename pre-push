@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly repo=$(pwd)
+
+to_delete=()
+trap '! rm -r ${to_delete[@]}' EXIT
+
+
+die() {
+    echo "$1" >&2
+    exit 1
+}
+
+test_ros() {
+    echo "ROS tests not implemented"
+}
+
+test_cmake() {
+    echo "Running CMake"
+    mkdir build
+    cd build
+    cmake ..
+    make -j || make test
+    retval=$?
+    cd ..
+    return $retval
+}
+
+test_python() {
+    python -m pytest
+    [[ $? == 0 || $? == 5 ]]
+}
+
+run_tests() {
+    local result=0
+    if [ -f CMakeLists.txt ]; then
+        if grep -q "catkin_package" CMakeLists.txt; then
+            set +e
+            test_ros
+            (( result |= $? ))
+            set -e
+        else
+            set +e
+            test_cmake
+            (( result |= $? ))
+            set -e
+        fi
+    else
+        set +e
+        test_python
+        (( result |= $? ))
+        set -e
+    fi
+    return $result
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    echo "Verifying local $local_ref before pushing to remote $remote_ref";
+    echo "$local_sha";
+
+    dir=$(mktemp -d)
+    to_delete+=($dir)
+
+    branch=$(cut -d/ -f3- <<<"$local_ref")
+
+    git clone --single-branch --branch "$branch" "$repo" "$dir" || die "Could not clone"
+    cd $dir
+
+    run_tests || die "ERROR: Tests failed"
+done

@@ -1,0 +1,173 @@
+#!/usr/bin/env perl
+use v5.20;
+
+use strict;
+use warnings;
+
+use IPC::Open3;
+
+my $rev = "HEAD";
+if (system("git rev-parse --verify HEAD >/dev/null 2>&1")) {
+    # If HEAD has no referent, create tree pointing to /dev/null for comparison
+    $rev = `git hash-object -t tree /dev/null`;
+}
+
+sub parse_shebang {
+    # TODO
+    my $obj = shift;
+    my $first_line = `git cat-file -p $obj | head -n1 | head -c256`;
+
+    return 0;
+}
+
+sub to_command {
+    my ($cmd, $contents) = @_;
+    my $pid = open3(\*IN, \*OUT, \*ERR, $cmd);
+    print IN "$contents"; #"$contents";
+    close IN;
+    my @stdout = <OUT>;
+    my @stderr = <ERR>;
+    close OUT; close ERR;
+    waitpid $pid, 0;
+    return @stdout, @stderr;
+}
+
+sub run {
+    my ($cmd, $contents) = @_;
+
+    my @args = split / /, $cmd;
+    my $prog = $args[0];
+
+    print "\t$prog ";
+    my (@stdout,@stderr) = to_command $cmd, $contents;
+    my $retcode = $? >> 8;
+    say "[" . $retcode .  "]";
+
+    if ($retcode != 0) {
+        say @stdout;
+    }
+
+    return \@stdout, \@stderr, $retcode;
+}
+
+sub py_file {
+    my ($filename, $contents) = @_;
+
+    my $cmd = "pylint --disable=C --from-stdin '$filename'";
+    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
+    if ($retcode == 32) {
+        say @{$stderr};
+        die "pylint encountered an error!";
+    }
+    if ($retcode & 3) {
+        die "Error in file!";
+    }
+
+    run "flake8 --stdin-display-name='$filename' --count -", $contents;
+}
+
+sub shell_file {
+    my ($filename, $contents) = @_;
+
+    my ($stdout, $stderr, $retcode) = run "shellcheck -", $contents;
+    if ($retcode >= 2) {
+        say @{$stderr};
+        die "shellcheck encountered an error!";
+    }
+    if ($retcode == 2) {
+        die "Error in file!";
+    }
+}
+
+sub html_file() {
+    my ($filename, $contents) = @_;
+    my ($stdout, $stderr, $retcode) = run "xmllint --html --valid -", $contents;
+    if ($retcode) {
+        say @{$stderr};
+        die "HTML Linting error";
+    }
+}
+sub xml_file() {
+    my ($filename, $contents) = @_;
+    my ($stdout, $stderr, $retcode) = run "xmllint -", $contents;
+    if ($retcode) {
+        say @{$stderr};
+        die "XML Linting error"
+    }
+}
+sub json_file() {
+    my ($filename, $contents) = @_;
+    my ($stdout, $stderr, $retcode) = run "jq empty", $contents;
+    if ($retcode != 0) {
+        say @{$stderr};
+        die "JSON Linting error";
+    }
+}
+sub yaml_file() {
+    my ($filename, $contents) = @_;
+
+    my $cmd = "yamllint --strict -";
+    print "\tyamllint ";
+    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
+    if ($retcode == 1) {
+        die "YAML linting error";
+    }
+}
+
+my %hooks = (
+    #"cpp" => {"post" => \&cpp_post},
+    "py"   => {"file" => \&py_file},
+    "html" => {"file" => \&html_file},
+    "xml"  => {"file" => \&xml_file},
+    "json" => {"file" => \&json_file},
+    "yaml" => {"file" => \&yml_file},
+    "yml"  => {"file" => \&yml_file},
+    "sh"   => {"file" => \&shell_file},
+    "bash" => {"file" => \&shell_file},
+);
+
+my %files_by_type;
+for (`git diff-index --cached --full-index --diff-filter="ACMR" $rev`) {
+    # Dispatch file to handler based on extension
+    my @fields = split;
+    my $new_obj      = $fields[3];
+    my $filename     = $fields[5];
+
+    my ($ext) = $filename =~ /.\.(\w+)$/;
+
+    # If filename lacks extension, try extracting shebang, otherwise skip
+    if (not defined $ext) {
+        next unless $ext = parse_shebang $new_obj;
+    }
+
+    if (not exists $files_by_type{$ext}) {
+        $files_by_type{$ext} = [];
+    }
+    push @{$files_by_type{$ext}}, [$new_obj, $filename];
+
+}
+
+for my $ext (keys %files_by_type) {
+    say "Processing extension: " . $ext;
+
+    next unless exists $hooks{$ext};
+
+    # Run pre-hook
+    if (exists $hooks{$ext}->{"pre"}) {
+        $hooks{$ext}->{"pre"}(@{$files_by_type{$ext}});
+    }
+    # Run file hook on every file
+    if (exists $hooks{$ext}->{"file"}) {
+        for my $file_info (@{$files_by_type{$ext}}) {
+            my ($new_obj, $filename) = @{$file_info};
+            my $contents = `git cat-file -p $new_obj`;
+            say "Running hooks on $filename:";
+            say "=" x 80;
+            $hooks{$ext}->{"file"}($filename, $contents);
+        }
+    }
+    # Run post-hook
+    if (exists $hooks{$ext}->{"post"}) {
+        $hooks{$ext}->{"post"}(@{$files_by_type{$ext}})
+    }
+}

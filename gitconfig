@@ -1,0 +1,4 @@
+[filter "cpp"]
+	clean = clang-format --style="{BasedOnStyle: Google, IndentWidth: 4}"
+[filter "python"]
+	clean = black -
