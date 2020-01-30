@@ -73,7 +73,7 @@ sub run {
 sub py_file {
     my ($filename, $contents) = @_;
 
-    my $cmd = "pylint3 --disable=C -";
+    my $cmd = "pylint --disable=C --from-stdin '$filename' -";
     my ($stdout, $stderr, $retcode) = run $cmd, $contents;
     if ($retcode == 32) {
         say @{$stderr};
