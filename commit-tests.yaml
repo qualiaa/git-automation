@@ -1,0 +1,76 @@
+tools:
+  pylint:
+    flags: "--disable=C -"
+    name-flag: "--from-stdin"
+    fail-codes: [32]
+    error-codes: [1,2,3]
+  flake8:
+    flags: "--count"
+    name-flag: "--stdin-display-name"
+  shellcheck:
+    flags: "-"
+    fail-codes: [2,3,4,5]
+    err: stdout
+  xmllint:
+    flags: "-"
+    error-codes: [1] # Need to check this
+    out: stderr
+  jq:
+    flags: "empty"
+    error-codes: [1] # Need to check this
+    out: stderr
+  yamllint:
+    flags: "--strict -"
+    error-codes: [1] # Need to check this
+  eslint:
+    flags: "--stdin"
+    name-flag: "--stdin-filename"
+    error-codes: [1]
+    fail-codes: [2]
+  stylelint:
+    flags: "--formatter compact"
+    name-flag: "--stdin-filename"
+    error-codes: [2]
+    fail-codes: [1, 78]
+    err: stdout
+
+lang:
+  shell:
+    exts: "sh", "bash", "zsh", "ksh"
+    bangs: &exts
+    tools:
+      - shellcheck:
+          extra-flags: "-S warning"
+          error-codes: [1]
+      - shellcheck
+
+  python:
+    exts: "py"
+    bangs: "python", "python3"
+    tools: [pylint, flake8]
+
+  javascript:
+    exts: "js"
+    tools: [eslint]
+
+  html:
+    exts: "html","xhtml","htm"
+    tools:
+      - xmllint:
+          extra-flags: "--html"
+
+  css:
+    exts: "css", "sass"
+    tools: [stylelint]
+
+  json:
+    exts: "json"
+    tools: [jq]
+
+  xml:
+    exts: "xml","launch"
+    tools: [xmllint]
+
+  yaml:
+    exts: "yml", "yaml"
+    tools: [yamllint]
