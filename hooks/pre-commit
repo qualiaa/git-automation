@@ -14,7 +14,6 @@ if (system("git rev-parse --verify HEAD >/dev/null 2>&1")) {
 }
 
 my %prog_to_ext = (
-    #"cpp" => {"post" => \&cpp_post},
     "python"     => "py",
     "python3"    => "py",
     "perl"       => "pl",
@@ -89,14 +88,14 @@ sub py_file {
 sub shell_file {
     my ($filename, $contents) = @_;
 
-    my ($stdout, $stderr, $retcode) = run "shellcheck -", $contents;
+    my ($stdout, $stderr, $retcode) = run "shellcheck -S warning -", $contents;
     if ($retcode >= 2) {
-        say @{$stderr};
         die "shellcheck encountered an error!";
-    }
-    if ($retcode == 2) {
+    } elsif ($retcode != 0) {
         die "Error in file!";
     }
+    # shellcheck exits with 1 on any output, >=2 on internal or usage problems
+    run "shellcheck -", $contents;
 }
 
 sub html_file() {
