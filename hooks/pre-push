@@ -17,6 +17,7 @@ test_ros() {
     if [ -f "$repo/../../.catkin_workspace" ]; then
         (
             cd "$repo/../.."
+            # shellcheck disable=SC1091
             source devel/setup.bash
             rm -rf build/*
             catkin_make && catkin_make run_tests
@@ -38,6 +39,7 @@ test_cmake() {
 
 test_python() {
     python -m pytest
+    # shellcheck disable=SC2181
     [[ $? == 0 || $? == 5 ]]
 }
 
@@ -71,16 +73,18 @@ run_tests() {
     return $result
 }
 
+# shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha; do
     echo "Verifying local $local_ref before pushing to remote $remote_ref";
-    echo "$local_sha";
 
     dir=$(mktemp -d)
+    # shellcheck disable=SC2206
     to_delete+=($dir)
 
     branch=$(cut -d/ -f3- <<<"$local_ref")
 
     git clone --single-branch --branch "$branch" "$repo" "$dir" || die "Could not clone"
+    # shellcheck disable=SC2086
     cd $dir
 
     run_tests || die "ERROR: Tests failed"
