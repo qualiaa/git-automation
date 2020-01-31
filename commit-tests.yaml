@@ -3,13 +3,13 @@ tools:
     flags: "--disable=C -"
     name-flag: "--from-stdin"
     fail-codes: [32]
-    error-codes: [1,2,3]
+    error-codes: [1, 2, 3]
   flake8:
     flags: "--count"
     name-flag: "--stdin-display-name"
   shellcheck:
     flags: "-"
-    fail-codes: [2,3,4,5]
+    fail-codes: [2, 3, 4, 5]
     err: stdout
   xmllint:
     flags: "-"
@@ -36,7 +36,7 @@ tools:
 
 lang:
   shell:
-    exts: "sh", "bash", "zsh", "ksh"
+    exts: ["sh", "bash", "zsh", "ksh"]
     bangs: &exts
     tools:
       - shellcheck:
@@ -45,32 +45,32 @@ lang:
       - shellcheck
 
   python:
-    exts: "py"
-    bangs: "python", "python3"
+    exts: ["py"]
+    bangs: ["python", "python3"]
     tools: [pylint, flake8]
 
   javascript:
-    exts: "js"
+    exts: ["js"]
     tools: [eslint]
 
   html:
-    exts: "html","xhtml","htm"
+    exts: ["html", "xhtml", "htm"]
     tools:
       - xmllint:
           extra-flags: "--html"
 
   css:
-    exts: "css", "sass"
+    exts: ["css", "sass"]
     tools: [stylelint]
 
   json:
-    exts: "json"
+    exts: ["json"]
     tools: [jq]
 
   xml:
-    exts: "xml","launch"
+    exts: ["xml", "launch"]
     tools: [xmllint]
 
   yaml:
-    exts: "yml", "yaml"
+    exts: ["yml", "yaml"]
     tools: [yamllint]
