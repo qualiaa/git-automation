@@ -121,9 +121,6 @@ sub parse_shebang {
 }
 
 sub run_cmd {
-    # XXX
-    return ["stdout!"], ["stderr!"], 2;
-
     my ($cmd, $contents) = @_;
     my $pid = open3(\*IN, \*OUT, \*ERR, $cmd);
     print IN "$contents";       #"$contents";
@@ -187,10 +184,11 @@ sub process_lang {
     my ($langconf, $files) = @_;
     my $failure = 0;
 
+    # Store tools in order with merged config from tools and $langconf->tools
     my @tools;
     for my $tool (@{$langconf->{tools}}) {
-        my $toolname;
-        my $toolconf;
+        my ($toolname, $toolconf);
+
         if (ref $tool eq "HASH") {
             ($toolname) = keys %{$tool};
             $toolconf = union([$config->{tools}->{$toolname}, $tool->{$toolname}]);
@@ -198,15 +196,17 @@ sub process_lang {
             $toolname = $tool;
             $toolconf = $config->{tools}->{$toolname};
         }
+
         $toolconf->{name} = $toolname;
         chomp ($toolconf->{path} = `which $toolname`) if not exists $toolconf->{path};
         push @tools, $toolconf;
     }
+
+    # Run all tools over each file
     for my $file (@{$files}) {
         my ($filename, $obj_sha) = @{$file};
         say "$filename:";
         say "-" x 80;
-        # XXX
         my $contents = `git cat-file -p $obj_sha`;
         for my $tool (@tools) {
             $failure |= run_tool $tool, $filename, $contents;
@@ -215,13 +215,14 @@ sub process_lang {
     return $failure;
 }
 
+# Get the previous commit to build list of staged files
 my $rev = "HEAD";
 if (system("git rev-parse --verify HEAD >/dev/null 2>&1")) {
     # If HEAD has no referent, create tree pointing to /dev/null for comparison
     $rev = `git hash-object -t tree /dev/null`;
 }
 
-# Build file mapping
+# Build file mapping from list of staged files
 my %files_by_lang;
 for (`git diff-index --cached --full-index --diff-filter="ACMR" $rev`) {
     # Dispatch file to handler based on extension
@@ -235,6 +236,7 @@ for (`git diff-index --cached --full-index --diff-filter="ACMR" $rev`) {
     push @{$files_by_lang{$lang}}, [$filename, $new_obj] if defined $lang;
 }
 
+# For all collected files, run appropriate tools keeping track of error status
 my $failure = 0;
 for my $lang (keys %files_by_lang) {
     next unless exists $config->{lang}->{$lang}
