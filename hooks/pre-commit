@@ -153,7 +153,6 @@ sub run_tool {
     }
 
     my $cmd = build_cmd $tool, $filename;
-    say $cmd;
     print "\t$tool->{name} ";
 
     my ($stdout, $stderr, $retcode) = run_cmd $cmd, $contents;
@@ -214,7 +213,7 @@ sub process_lang {
         say "-" x 80;
         my $contents = `git cat-file -p $obj_sha`;
         for my $tool (@tools) {
-            $failure |= run_tool $tool, $filename, $contents;
+            $failure |= !run_tool $tool, $filename, $contents;
         }
     }
     return $failure;
@@ -236,7 +235,8 @@ for (`git diff-index --cached --full-index --diff-filter="ACMR" $rev`) {
     my $filename     = $fields[5];
 
     # If filename lacks extension, try extracting shebang, otherwise skip
-    my $lang = parse_ext $filename // parse_shebang $new_obj;
+    my $lang = parse_ext $filename;
+    $lang = parse_shebang $new_obj if not defined $lang;
 
     push @{$files_by_lang{$lang}}, [$filename, $new_obj] if defined $lang;
 }
