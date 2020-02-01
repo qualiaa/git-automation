@@ -1,27 +1,41 @@
 #!/usr/bin/env perl
-use v5.20;
 
+use v5.20;
 use strict;
 use warnings;
 
 use File::Basename;
+use Hash::Union qw(union);
 use IPC::Open3;
+use List::Util qw(any);
+use YAML;
 
-my $rev = "HEAD";
-if (system("git rev-parse --verify HEAD >/dev/null 2>&1")) {
-    # If HEAD has no referent, create tree pointing to /dev/null for comparison
-    $rev = `git hash-object -t tree /dev/null`;
+my $config_file = "commit-tests.yaml";
+my $config = Load(<<"...");
+...
+
+# Read and merge user config
+if (-f $config_file) {
+    open YML, "<$config_file";
+    $config = union([$config, Load(do { local $/; <YML>})]);
+    close YML;
 }
 
-my %prog_to_ext = (
-    "python"     => "py",
-    "python3"    => "py",
-    "perl"       => "pl",
-    "sh"         => "sh",
-    "node"       => "js",
-    "bash"       => "bash",
-    "runhaskell" => "hs",
-);
+sub match_lang {
+    my ($key, $val) = @_;
+    for my $lang (keys %{$config->{lang}}) {
+        my $vals = $config->{lang}->{$lang}->{$key};
+        return $lang if any {$_ eq $val} @{$vals};
+    }
+}
+
+sub parse_ext {
+    my $filename = shift;
+    my ($ext) = $filename =~ /.\.(\w+)$/;
+    if (defined $ext) {
+        return match_lang "exts", $ext;
+    }
+}
 
 sub parse_shebang {
     my $obj_sha = shift;
@@ -34,186 +48,134 @@ sub parse_shebang {
         if ($prog eq "env") {
             $prog = $arg1;
         }
-        return $prog_to_ext{$prog};
+        return match_lang "bangs", $prog;
     }
-    return 0;
 }
 
-sub to_command {
+sub run_cmd {
+    # XXX
+    return ["stdout!"], ["stderr!"], 2;
+
     my ($cmd, $contents) = @_;
     my $pid = open3(\*IN, \*OUT, \*ERR, $cmd);
-    print IN "$contents"; #"$contents";
+    print IN "$contents";       #"$contents";
     close IN;
     my @stdout = <OUT>;
     my @stderr = <ERR>;
     close OUT; close ERR;
     waitpid $pid, 0;
-    return @stdout, @stderr;
+    return @stdout, @stderr, $? >> 8;
 }
 
-sub run {
-    my ($cmd, $contents) = @_;
+sub build_cmd {
+    my ($tool, $filename) = @_;
 
-    my @args = split / /, $cmd;
-    my $prog = $args[0];
+    my $cmd  = "$tool->{path}";
+    $cmd .= " $tool->{flags}"                   if exists $tool->{flags};
+    $cmd .= " $tool->{'extra-flags'}"           if exists $tool->{'extra-flags'};
+    $cmd .= " $tool->{'name-flag'} '$filename'" if exists $tool->{'name-flag'};
+    return $cmd;
+}
 
-    print "\t$prog ";
-    my (@stdout,@stderr) = to_command $cmd, $contents;
-    my $retcode = $? >> 8;
+sub run_tool {
+    my ($tool, $filename, $contents) = @_;
+
+    if (! -x "$tool->{path}") {
+        say "Failed to run $tool->{name}: cannot execute $tool->{path}";
+        return;
+    }
+
+    my $cmd = build_cmd $tool, $filename;
+    say $cmd;
+    print "\t$tool->{name} ";
+
+    my ($stdout, $stderr, $retcode) = run_cmd $cmd, $contents;
     say "[" . $retcode .  "]";
 
-    if ($retcode != 0) {
-        say @stdout;
+    my $fail_codes  = $tool->{'fail-codes'}  // [];
+    my $error_codes = $tool->{'error-codes'} // [];
+
+    if (any {$_ == $retcode} @{$error_codes}) {
+        if (exists $tool->{err} and $tool->{err} eq "stdout") {
+            say @{$stdout};
+        } else {
+            say @{$stderr};
+        }
+        say "$tool->{name} encountered an error!";
     }
-
-    return \@stdout, \@stderr, $retcode;
-}
-
-sub py_file {
-    my ($filename, $contents) = @_;
-
-    my $cmd = "pylint --disable=C --from-stdin '$filename' -";
-    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
-    if ($retcode == 32) {
-        say @{$stderr};
-        die "pylint encountered an error!";
-    }
-    if ($retcode & 3) {
-        die "Error in file!";
-    }
-
-    run "flake8 --stdin-display-name='$filename' --count -", $contents;
-}
-
-sub shell_file {
-    my ($filename, $contents) = @_;
-
-    my ($stdout, $stderr, $retcode) = run "shellcheck -S warning -", $contents;
-    if ($retcode >= 2) {
-        die "shellcheck encountered an error!";
-    } elsif ($retcode != 0) {
-        die "Error in file!";
-    }
-    # shellcheck exits with 1 on any output, >=2 on internal or usage problems
-    run "shellcheck -", $contents;
-}
-
-sub html_file() {
-    my ($filename, $contents) = @_;
-    my ($stdout, $stderr, $retcode) = run "xmllint --html --valid -", $contents;
-    if ($retcode) {
-        say @{$stderr};
-        die "HTML Linting error";
-    }
-}
-sub xml_file() {
-    my ($filename, $contents) = @_;
-    my ($stdout, $stderr, $retcode) = run "xmllint -", $contents;
-    if ($retcode) {
-        say @{$stderr};
-        die "XML Linting error"
-    }
-}
-sub json_file() {
-    my ($filename, $contents) = @_;
-    my ($stdout, $stderr, $retcode) = run "jq empty", $contents;
-    if ($retcode != 0) {
-        say @{$stderr};
-        die "JSON Linting error";
-    }
-}
-sub yaml_file() {
-    my ($filename, $contents) = @_;
-
-    my $cmd = "yamllint --strict -";
-    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
-    if ($retcode == 1) {
-        die "YAML linting error";
+    else {
+        if (exists $tool->{out} and $tool->{out} eq "stderr") {
+            say @{$stderr};
+        } else {
+            say @{$stdout};
+        }
+        if (any {$_ == $retcode} @{$fail_codes}) {
+            say "Error in $filename";
+        }
     }
 }
 
-sub js_file() {
-    my ($filename, $contents) = @_;
+sub process_lang {
+    my ($langconf, $files) = @_;
+    my $failure = 0;
 
-    my $cmd = "eslint --stdin --stdin-filename '$filename'";
-    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
-    if ($retcode == 1) {
-        die "ES linting error";
-    } elsif ($retcode == 2) {
-        say @{$stderr};
-        die "ESLint encountered an error";
+    my @tools;
+    for my $tool (@{$langconf->{tools}}) {
+        my $toolname;
+        my $toolconf;
+        if (ref $tool eq "HASH") {
+            ($toolname) = keys %{$tool};
+            $toolconf = union([$config->{tools}->{$toolname}, $tool->{$toolname}]);
+        } else {
+            $toolname = $tool;
+            $toolconf = $config->{tools}->{$toolname};
+        }
+        $toolconf->{name} = $toolname;
+        chomp ($toolconf->{path} = `which $toolname`) if not exists $toolconf->{path};
+        push @tools, $toolconf;
     }
+    for my $file (@{$files}) {
+        my ($filename, $obj_sha) = @{$file};
+        say "$filename:";
+        say "-" x 80;
+        # XXX
+        my $contents = `git cat-file -p $obj_sha`;
+        for my $tool (@tools) {
+            $failure |= run_tool $tool, $filename, $contents;
+        }
+    }
+    return $failure;
 }
 
-sub css_file() {
-    my ($filename, $contents) = @_;
-
-    my $cmd = "stylelint --stdin-filename '$filename' --formatter compact";
-    my ($stdout, $stderr, $retcode) = run $cmd, $contents;
-    if ($retcode == 1 || $retcode == 78) {
-        die "stylelint encountered an error";
-    } elsif ($retcode == 2) {
-        die "CSS linting error";
-    }
+my $rev = "HEAD";
+if (system("git rev-parse --verify HEAD >/dev/null 2>&1")) {
+    # If HEAD has no referent, create tree pointing to /dev/null for comparison
+    $rev = `git hash-object -t tree /dev/null`;
 }
 
-my %hooks = (
-    #"cpp" => {"post" => \&cpp_post},
-    "py"   => {"file" => \&py_file},
-    "xml"  => {"file" => \&xml_file},
-    "json" => {"file" => \&json_file},
-    "yaml" => {"file" => \&yaml_file},
-    "yml"  => {"file" => \&yaml_file},
-    "sh"   => {"file" => \&shell_file},
-    "bash" => {"file" => \&shell_file},
-    "sass" => {"file" => \&css_file},
-    "css"  => {"file" => \&css_file},
-    "js"   => {"file" => \&js_file},
-    "html" => {"file" => \&html_file},
-);
-
-my %files_by_type;
+# Build file mapping
+my %files_by_lang;
 for (`git diff-index --cached --full-index --diff-filter="ACMR" $rev`) {
     # Dispatch file to handler based on extension
     my @fields = split;
     my $new_obj      = $fields[3];
     my $filename     = $fields[5];
 
-    my ($ext) = $filename =~ /.\.(\w+)$/;
-
     # If filename lacks extension, try extracting shebang, otherwise skip
-    if (not defined $ext) {
-        next unless $ext = parse_shebang $new_obj;
-    }
+    my $lang = parse_ext $filename or parse_shebang $new_obj;
 
-    if (not exists $files_by_type{$ext}) {
-        $files_by_type{$ext} = [];
-    }
-    push @{$files_by_type{$ext}}, [$new_obj, $filename];
-
+    push @{$files_by_lang{$lang}}, [$filename, $new_obj] if defined $lang;
 }
 
-for my $ext (keys %files_by_type) {
-    say "Processing extension: " . $ext;
+my $failure = 0;
+for my $lang (keys %files_by_lang) {
+    next unless exists $config->{lang}->{$lang}
+            and exists $config->{lang}->{$lang}->{tools};
 
-    next unless exists $hooks{$ext};
+    my %langconf = %{$config->{lang}->{$lang}};
 
-    # Run pre-hook
-    if (exists $hooks{$ext}->{"pre"}) {
-        $hooks{$ext}->{"pre"}(@{$files_by_type{$ext}});
-    }
-    # Run file hook on every file
-    if (exists $hooks{$ext}->{"file"}) {
-        for my $file_info (@{$files_by_type{$ext}}) {
-            my ($new_obj, $filename) = @{$file_info};
-            my $contents = `git cat-file -p $new_obj`;
-            say "Running hooks on $filename:";
-            say "=" x 80;
-            $hooks{$ext}->{"file"}($filename, $contents);
-        }
-    }
-    # Run post-hook
-    if (exists $hooks{$ext}->{"post"}) {
-        $hooks{$ext}->{"post"}(@{$files_by_type{$ext}})
-    }
+    say "Processing filetype: $lang";
+    say "=" x 80;
+    $failure |= process_lang \%langconf, $files_by_lang{$lang};
 }
+exit $failure;
