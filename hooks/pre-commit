@@ -147,7 +147,7 @@ sub run_tool {
 
     if (! -x "$tool->{path}") {
         say "Failed to run $tool->{name}: cannot execute $tool->{path}";
-        return;
+        return 1;
     }
 
     my $cmd = build_cmd $tool, $filename;
@@ -167,6 +167,7 @@ sub run_tool {
             say @{$stderr};
         }
         say "$tool->{name} encountered an error!";
+        return 0;
     }
     else {
         if (exists $tool->{out} and $tool->{out} eq "stderr") {
@@ -176,8 +177,10 @@ sub run_tool {
         }
         if (any {$_ == $retcode} @{$fail_codes}) {
             say "Error in $filename";
+            return 0;
         }
     }
+    return 1;
 }
 
 sub process_lang {
