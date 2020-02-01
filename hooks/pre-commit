@@ -12,6 +12,74 @@ use YAML;
 
 my $config_file = "commit-tests.yaml";
 my $config = Load(<<"...");
+tools:
+  pylint:
+    flags: "--disable=C -"
+    name-flag: "--from-stdin"
+    error-codes: [32]
+    fail-codes: [1, 2, 3]
+  flake8:
+    flags: "--count"
+    name-flag: "--stdin-display-name"
+  shellcheck:
+    flags: "-"
+    error-codes: [2, 3, 4, 5]
+    err: stdout
+  xmllint:
+    flags: "-"
+    fail-codes: [1] # Need to check this
+    out: stderr
+  jq:
+    flags: "empty"
+    fail-codes: [1] # Need to check this
+    out: stderr
+  yamllint:
+    flags: "--strict -"
+    fail-codes: [1] # Need to check this
+  eslint:
+    flags: "--stdin"
+    name-flag: "--stdin-filename"
+    fail-codes: [1]
+    error-codes: [2]
+  stylelint:
+    flags: "--formatter compact"
+    name-flag: "--stdin-filename"
+    fail-codes: [2]
+    error-codes: [1, 78]
+    err: stdout
+lang:
+  shell:
+    exts: ["sh", "bash", "zsh", "ksh", "csh"]
+    bangs: ["sh", "bash", "zsh", "ksh", "csh"]
+    tools:
+      - shellcheck:
+          extra-flags: "-S warning"
+          fail-codes: [1]
+      - shellcheck
+  python:
+    exts: ["py"]
+    bangs: ["python", "python3"]
+    tools: [pylint, flake8]
+  javascript:
+    exts: ["js"]
+    tools: [eslint]
+  html:
+    exts: ["html", "xhtml", "htm"]
+    tools:
+      - xmllint:
+          extra-flags: "--html"
+  css:
+    exts: ["css", "sass"]
+    tools: [stylelint]
+  json:
+    exts: ["json"]
+    tools: [jq]
+  xml:
+    exts: ["xml"]
+    tools: [xmllint]
+  yaml:
+    exts: ["yml", "yaml"]
+    tools: [yamllint]
 ...
 
 # Read and merge user config
