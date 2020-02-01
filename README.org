@@ -44,8 +44,10 @@ linters is:
 Per project, just dump the files in your repo:
 
 #+BEGIN_EXAMPLE
-hooks => .git/hooks info => .git/info gitconfig => .gitconfig gitattributes =>
-.gitattributes commit-tests.yaml => commit-tests.yaml #+END_EXAMPLE
+hooks => .git/hooks info => .git/info
+gitconfig => .gitconfig
+gitattributes => .gitattributes commit-tests.yaml => commit-tests.yaml
+#+END_EXAMPLE
 
 *** For your user
     
