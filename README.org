@@ -96,8 +96,8 @@ know simple shell you can probably add your own tools to the script directly.
 The clean filters are simple - you can recreate the =gitconfig= easily:
 
 #+BEGIN_SRC shell
-  git config filter.cpp.clean "clang-format --style=Google" git config
-  filter.py.clean "black -"
+  git config filter.cpp.clean "clang-format --style=Google"
+  git config filter.py.clean "black -"
 #+END_SRC
 
 You can pass ~git config~ the flags =--global= to install for your user or
@@ -111,7 +111,7 @@ The [[.gitattrubutes][=gitattributes=]] file is just a list of globs binding fil
 [[https://git-scm.com/docs/gitattributes][~man gitattributes~]].
 
 
-* Future Work and Known Issues
+** Future Work and Known Issues
   
  - The pre-commit hook needs pre- and post-actions for different languages,
    /e.g./ to source a Python virtual environment before linting.
