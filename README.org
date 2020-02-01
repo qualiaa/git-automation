@@ -97,7 +97,8 @@ The clean filters are simple - you can recreate the =gitconfig= easily:
 
 #+BEGIN_SRC shell
   git config filter.cpp.clean "clang-format --style=Google" git config
-  filter.py.clean "black -" #+END_SRC
+  filter.py.clean "black -"
+#+END_SRC
 
 You can pass ~git config~ the flags =--global= to install for your user or
 =--system= to install for your system (requires root).
