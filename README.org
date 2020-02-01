@@ -1,0 +1,116 @@
+#+LINK: config    https://github.com/qualiaa/git-automation/blob/master/hooks/pre-commit#L14
+
+* Git Automation Tools
+  
+A few tools for client-side git automation.
+
+ - Hooks for automatic linting, building and testing.
+ - An info/exclude file ignoring many common non-SCM files.
+ - Simple config for automatic code formatting via clean filters,
+
+Specifically, the staged version of Python and C++ code is reformatted when
+staged with ~git add~, leaving your local copy unchanged. When you commit code,
+the staged versions of all changed files are validated according to [[Pre-push][your
+configuration]], with a lot of formats ready out of the box. Finally, before a
+push, a small number of known build tools and test suites are checked if
+present.
+
+** Requirements
+   
+The clean filters use [[https://www.google.com/search?hl=en&q=clang%20format][clang-format]] for C/C++ and [[https://black.readthedocs.io/en/stable/][black]] for Python. The
+pre-commit hook requires the Hash::Union perl module, which can be installed
+with:
+
+#+BEGIN_SRC shell
+sudo cpan Hash::Union
+#+END_SRC shell
+
+The pre-commit hook runs a number of linters if available, and can be configured
+for more; see the [[config][default configuration]]. The current list of pre-configured
+linters is:
+
+ - pylint
+ - flake8
+ - shellcheck
+ - stylelint
+ - eslint
+ - xmllint
+ - jq
+ - yamllint
+ 
+** Install
+
+*** To one project
+Per project, just dump the files in your repo:
+
+#+BEGIN_EXAMPLE
+hooks => .git/hooks info => .git/info gitconfig => .gitconfig gitattributes =>
+.gitattributes commit-tests.yaml => commit-tests.yaml #+END_EXAMPLE
+
+*** For your user
+    
+To install the clean filter for your user, merge =gitconfig= and =gitattributes=
+with their equivalents in =$HOME= or =$XDG_CONFIG_HOME/git=, or see [[Clean filters]].
+
+To install hooks and info for your user, you need to set up your own git
+template directory - read the *GIT TEMPLATES* section of [[https://git-scm.com/docs/git-init][~man git-init~]]. If you
+have root privileges, you can easily set them up [[System-wide]] instead.
+
+Once the git template is configured, it will be installed automatically to
+repositories created with =git init= - for existing repositories, =git init=
+will install them without overwriting existing files.
+
+*** System-wide
+    
+To install the clean filter for your user, merge =gitconfig= and =gitattributes=
+with their equivalents in =/etc=, or see [[Clean filters]].
+
+To install the hooks and info system-wide:
+
+#+BEGIN_EXAMPLE
+hooks => /usr/share/git-core/templates/hooks
+info  => /usr/share/git-core/templates/info
+#+END_EXAMPLE
+
+Once the hooks are installed to a template, they will be installed into any new
+repositories automatically.
+
+Once the git template is configured, it will be installed automatically to
+repositories created with =git init= - for existing repositories, =git init=
+will install them without overwriting existing files.
+
+** Configuration
+*** Pre-commit
+    
+The pre-commit hook reads =commit-tests.yaml= in the root of the repository if
+present. The default configuration is [[config][here]].
+
+*** Pre-push
+The pre-push hook is not currently configurable, it isn't very smart. If you
+know simple shell you can probably add your own tools to the script directly.
+
+*** Clean filters
+
+The clean filters are simple - you can recreate the =gitconfig= easily:
+
+#+BEGIN_SRC shell
+  git config filter.cpp.clean "clang-format --style=Google" git config
+  filter.py.clean "black -" #+END_SRC
+
+You can pass ~git config~ the flags =--global= to install for your user or
+=--system= to install for your system (requires root).
+
+If you conform to one style but your organisation another, you can configure a
+=clean= filter to use their style, and a matching =smudge= filter which converts
+back to your style.
+
+The [[.gitattrubutes][=gitattributes=]] file is just a list of globs binding files to filters, see
+[[https://git-scm.com/docs/gitattributes][~man gitattributes~]].
+
+
+* Future Work and Known Issues
+  
+ - The pre-commit hook needs pre- and post-actions for different languages,
+   /e.g./ to source a Python virtual environment before linting.
+ - The pre-push hook is rudimentary and needs further tool support.
+ - The pre-push hook currently crashes if pytest is not installed.
