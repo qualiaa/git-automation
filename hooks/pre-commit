@@ -129,7 +129,7 @@ sub run_cmd {
     my @stderr = <ERR>;
     close OUT; close ERR;
     waitpid $pid, 0;
-    return @stdout, @stderr, $? >> 8;
+    return \@stdout, \@stderr, $? >> 8;
 }
 
 sub build_cmd {
