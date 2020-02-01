@@ -234,7 +234,7 @@ for (`git diff-index --cached --full-index --diff-filter="ACMR" $rev`) {
     my $filename     = $fields[5];
 
     # If filename lacks extension, try extracting shebang, otherwise skip
-    my $lang = parse_ext $filename or parse_shebang $new_obj;
+    my $lang = parse_ext $filename // parse_shebang $new_obj;
 
     push @{$files_by_lang{$lang}}, [$filename, $new_obj] if defined $lang;
 }
