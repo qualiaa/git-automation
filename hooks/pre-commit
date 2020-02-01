@@ -103,6 +103,7 @@ sub parse_ext {
     if (defined $ext) {
         return match_lang "exts", $ext;
     }
+    return;
 }
 
 sub parse_shebang {
@@ -118,6 +119,7 @@ sub parse_shebang {
         }
         return match_lang "bangs", $prog;
     }
+    return;
 }
 
 sub run_cmd {
