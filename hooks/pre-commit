@@ -14,12 +14,13 @@ my $config_file = "commit-tests.yaml";
 my $config = Load(<<"...");
 tools:
   pylint:
-    flags: "--disable=C -"
+    flags: "--disable=C"
     name-flag: "--from-stdin"
     error-codes: [32]
     fail-codes: [1, 2, 3]
+    out: stderr
   flake8:
-    flags: "--count"
+    flags: "--count -"
     name-flag: "--stdin-display-name"
   shellcheck:
     flags: "-"
