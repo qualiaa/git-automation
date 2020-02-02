@@ -55,7 +55,7 @@ To install the clean filter for your user, merge =gitconfig= and =gitattributes=
 with their equivalents in =$HOME= or =$XDG_CONFIG_HOME/git=, or see [[Clean filters]].
 
 To install hooks and info for your user, you need to set up your own git
-template directory - read the *GIT TEMPLATES* section of [[https://git-scm.com/docs/git-init][~man git-init~]]. If you
+template directory - read the *GIT TEMPLATES* section of ~[[https://git-scm.com/docs/git-init][~man git-init]]~. If you
 have root privileges, you can easily set them up [[System-wide]] instead.
 
 Once the git template is configured, it will be installed automatically to
@@ -115,5 +115,6 @@ The [[.gitattrubutes][=gitattributes=]] file is just a list of globs binding fil
   
  - The pre-commit hook needs pre- and post-actions for different languages,
    /e.g./ to source a Python virtual environment before linting.
+ - Some tools OR flags (e.g. PyLint), which leads to confusing flags.
  - The pre-push hook is rudimentary and needs further tool support.
  - The pre-push hook currently crashes if pytest is not installed.
