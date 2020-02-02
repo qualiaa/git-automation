@@ -44,9 +44,11 @@ linters is:
 Per project, just dump the files in your repo:
 
 #+BEGIN_EXAMPLE
-hooks => .git/hooks info => .git/info
-gitconfig => .gitconfig
-gitattributes => .gitattributes commit-tests.yaml => commit-tests.yaml
+hooks             => .git/hooks
+info              => .git/info
+gitconfig         => .gitconfig
+gitattributes     => .gitattributes
+commit-tests.yaml => commit-tests.yaml
 #+END_EXAMPLE
 
 *** For your user
@@ -97,7 +99,7 @@ The clean filters are simple - you can recreate the =gitconfig= easily:
 
 #+BEGIN_SRC shell
   git config filter.cpp.clean "clang-format --style=Google"
-  git config filter.py.clean "black -"
+  git config filter.py.clean  "black -"
 #+END_SRC
 
 You can pass ~git config~ the flags =--global= to install for your user or
