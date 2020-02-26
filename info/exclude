@@ -11,9 +11,10 @@ build/
 dist/
 
 # Python stuff
+.ipynb_checkpoints
 __pycache__
 *.py[cod]
-
+.mypy_cache/
 .env
 .venv
 
